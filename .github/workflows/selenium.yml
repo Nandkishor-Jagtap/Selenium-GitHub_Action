@@ -1,0 +1,53 @@
+name: Simple Selenium CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run Selenium test
+        run: |
+          mkdir selenium-test
+          cd selenium-test
+          echo "Downloading Selenium jars..."
+          curl -LO https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.18.1/selenium-java-4.18.1.zip
+          unzip selenium-java-4.18.1.zip
+          echo "Creating test file..."
+          cat > GoogleSearch.java <<'EOF'
+          import org.openqa.selenium.By;
+          import org.openqa.selenium.WebDriver;
+          import org.openqa.selenium.WebElement;
+          import org.openqa.selenium.chrome.ChromeDriver;
+          import org.openqa.selenium.chrome.ChromeOptions;
+          import io.github.bonigarcia.wdm.WebDriverManager;
+
+          public class GoogleSearch {
+              public static void main(String[] args) throws Exception {
+                  WebDriverManager.chromedriver().setup();
+                  ChromeOptions options = new ChromeOptions();
+                  options.addArguments("--headless");
+                  WebDriver driver = new ChromeDriver(options);
+                  driver.get("https://www.google.com");
+                  WebElement box = driver.findElement(By.name("q"));
+                  box.sendKeys("Selenium WebDriver");
+                  box.submit();
+                  Thread.sleep(2000);
+                  System.out.println("Page title is: " + driver.getTitle());
+                  driver.quit();
+              }
+          }
+          EOF
+          echo "Compiling & running..."
+          javac -cp "selenium-java-4.18.1/*" GoogleSearch.java
+          java -cp ".:selenium-java-4.18.1/*" GoogleSearch
